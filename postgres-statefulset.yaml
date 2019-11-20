@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  namespace: outline-kb
+  name: postgres
+  labels:
+    app: kb
+    component: postgres
+spec:
+  selector:
+    matchLabels:
+      app: kb
+      component: postgres
+  serviceName: postgres-svc
+  template:
+    metadata:
+      labels:
+        app: kb
+        component: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres
+        env:
+        - name: POSTGRES_USER
+          valueRef:
+            secretKeyRef: 
+              name: outline-env
+              key: postgres-user
+        - name: POSTGRES_PASS
+          valueRef:
+            secretKeyRef:
+              name: outline-env
+              key: postgres-pass
+        - name: POSTGRES_DB
+          value: outline
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: data
+      initContainers:
+      - name: change-permission-of-directory
+        image: busybox
+        command:
+        - /bin/sh
+        args:
+        - -c
+        - chown -R 999:999 /var/lib/postgresql/data
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: data
+      - name: remove-lost-found
+        image: postgres
+        command:
+        - rm
+        - -Rf
+        - /var/lib/postgresql/data/lost+found
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: data
+  volumeClaimTemplates:
+  - metadata:
+      labels:
+        app: kb
+        component: postgres
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi
+      volumeMode: Filesystem
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: outline-kb
+  name: postgres-svc
+  labels:
+    app: kb
+    component: postgres
+spec:
+  ports:
+  - port: 5434
+    protocol: TCP
+    targetPort: 5432
+  selector:
+    app: kb
+    component: postgres
+  type: ClusterIP

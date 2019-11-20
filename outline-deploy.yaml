@@ -1,0 +1,98 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  namespace: outline-kb
+  name: outline-deploy
+  labels:
+    app: kb
+    component: outline
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kb
+      component: outline
+  template:
+    metadata:
+      labels:
+        app: kb
+        component: outline
+    spec:
+      containers:
+      - name: outline
+        image: outlinewiki/outline:version-0.37.0 
+        command: ["/bin/sh", "-c", "yarn && yarn sequelize:migrate && yarn build && yarn start"]
+        env:
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: outline-env
+              key: secret-key
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: outline-env
+              key: database-url
+        - name: DATABASE_URL_TEST
+          valueFrom:
+            secretKeyRef:
+              name: outline-env
+              key: database-url-test
+        - name: REDIS_URL
+          value: "redis://redis-svc:6380"
+        - name: URL
+          value: {{your-external-url}}
+        - name: PORT
+          value: "3000"
+        - name: FORCE_HTTPS
+          value: "false"
+        - name: DEPLOYMENT
+          value: "self"
+        - name: ENABLE_UPDATES
+          value: "true"
+        - name: SUBDOMAINS_ENABLED
+          value: "false"
+        - name: WEBSOCKETS_ENABLED
+          value: "true"
+        - name: DEBUG
+          value: "cache,presenters,events"
+        - name: SLACK_KEY 
+          valueFrom:
+            secretKeyRef:
+              name: outline-env
+              key: slack-key
+        - name: SLACK_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: outline-env
+              key: slack-secret
+        - name: SLACK_VERIFICATION_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: outline-env
+              key: slack-verification-token
+        - name: SLACK_APP_ID
+          valueFrom:
+            secretKeyRef:
+              name: outline-env
+              key: slack-app-id
+        - name: SLACK_MESSAGE_ACTIONS
+          value: "true"
+        - name: AWS_S3_UPLOAD_BUCKET_URL
+          value: "http://fakes3-svc:4569"
+        - name: AWS_S3_UPLOAD_BUCKET_NAME
+          value: "fakes3"   
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: outline-svc
+spec:
+  selector:
+    app: kb
+    component: outline
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000

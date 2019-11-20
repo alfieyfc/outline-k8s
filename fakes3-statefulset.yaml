@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  namepace: outline-kb
+  name: fakes3
+  labels:
+    app: kb
+    component: fakes3
+spec:
+  selector:
+    matchLabels:
+      app: kb
+      component: fakes3
+  serviceName: fakes3-svc
+  template:
+    metadata:
+      labels:
+        component: fakes3
+        app: kb
+    spec:
+      containers:
+      - image: lphoward/fake-s3
+        name: fakes3
+        volumeMounts:
+        - mountPath: /fakes3_root
+          name: data
+  volumeClaimTemplates:
+  - metadata:
+      labels:
+        app: kb
+        component: fakes3
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi
+      volumeMode: Filesystem
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: outline-kb
+  name: fakes3-svc
+  labels:
+    app: kb
+    component: fakes3
+spec:
+  ports:
+  - port: 4569
+    protocol: TCP
+    targetPort: 4569
+  selector:
+    app: kb
+    component: fakes3
+  type: ClusterIP

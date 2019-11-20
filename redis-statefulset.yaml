@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  namespace: outline-kb
+  name: redis
+  labels:
+    app: kb
+    component: redis
+spec:
+  selector:
+    matchLabels:
+      app: kb
+      component: redis
+  serviceName: redis-svc
+  template:
+    metadata:
+      labels:
+        component: redis
+        app: kb
+    spec:
+      containers:
+      - image: redis
+        name: redis-container
+        volumeMounts:
+        - mountPath: /var/lib/redis
+          name: data
+  volumeClaimTemplates:
+  - metadata:
+      labels:
+        app: kb
+        component: redis
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi
+      volumeMode: Filesystem
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: outline-kb
+  name: redis-svc
+  labels:
+    app: kb
+    component: redis
+spec:
+  ports:
+  - port: 6380
+    protocol: TCP
+    targetPort: 6379
+  selector:
+    app: kb
+    component: redis
+  type: ClusterIP
